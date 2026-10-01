@@ -107,16 +107,16 @@ The comparison is after dying in the game 10 times.
 
 #### CachyOS
 
-|           | After Fix                                                       | Before Fix                                                        |
-| --------- | --------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Frametime | ![Fixed CachyOS Frametime][/images/fixed_cachyos_frametime.png] | ![Unfixed CachyOS Frametime][/images/fixed_cachyos_frametime.png] |
-| Log       | ![Fixed CachyOS Log][/images/fixed_cachyos_log.png]             | ![Unfixed CachyOS Log][/images/fixed_cachyos_log.png]             |
+|           | After Fix                                                       | Before Fix                                                          |
+| --------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Frametime | ![Fixed CachyOS Frametime](/images/fixed_cachyos_frametime.png) | ![Unfixed CachyOS Frametime](/images/unfixed_cachyos_frametime.png) |
+| Log       | ![Fixed CachyOS Log](/images/fixed_cachyos_log.png)             | ![Unfixed CachyOS Log](/images/unfixed_cachyos_log.png)             |
 
 #### Steam Deck
 
 | After Fix                                                            | Before Fix                                                               |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| ![Fixed Steam Deck Frametime][/images/fixed_steamdeck_framerate.jpg] | ![Unfixed Steam Deck Frametime][/images/unfixed_steamdeck_framerate.jpg] |
+| ![Fixed Steam Deck Frametime](/images/fixed_steamdeck_framerate.jpg) | ![Unfixed Steam Deck Frametime](/images/unfixed_steamdeck_framerate.jpg) |
 
 ### Alternative Option: Achievements Disabled
 
