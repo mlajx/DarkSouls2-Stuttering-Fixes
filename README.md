@@ -1,37 +1,36 @@
 # Dark Souls II: Scholar of the First Sin - Stuttering Fixes (Proton / Linux / Steam Deck)
 
-A lightweight `dinput8.dll` proxy that eliminates the severe frametime stutter upon character death in *Dark Souls II: Scholar of the First Sin* on Linux and Steam Deck.
+A lightweight `dinput8.dll` proxy that eliminates the frametime stutter upon death in *Dark Souls II: Scholar of the First Sin* on Linux, including Steam Deck.
 
 ---
 
-### The Bug (Theory - Not Fully Confirmed)
+### TL;DR (Quick Install)
 
-When a player dies, *Dark Souls II* synchronously invokes `ISteamUserStats::StoreStats` on the main rendering thread.
+1. Download `dinput8.dll` from the Releases tab.
+2. Copy it into your game directory: `.../Dark Souls II Scholar of the First Sin/Game/`
+3. Set Launch Options in Steam (Steam Deck default): `MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" %command%`
 
-* **On Linux / Proton:** This call must cross the Wine-to-native Steam IPC socket bridge, which introduces a 50–150ms delay. Because the local cache does not update immediately, the game engine panics and aggressively re-triggers `StoreStats` in a recursive loop, completely stalling the render thread.
+_(For Linux Desktop or Seamless Co-op, see the full Installation section below)._
 
-By running your game with `WINEDEBUG=-all,warn+steam,err+steam,+steamclient PROTON_LOG=1` and comparing the log output when the player dies online versus offline.
+---
 
-**Test after dying 20 times:**
+### The bug
 
-|                  | StoreStats Log Lines Generated | Frametime |
-| ---------------- | ------------------------------ | --------- |
-| Online (Unfixed) | todo                           | todo      |
-| Offline          | todo                           | todo      |
+My assumption is that when a player dies, the game synchronously invokes `ISteamUserStats::StoreStats` on the main rendering thread.
 
-### The Fix
+And on Linux / Proton this call must cross the Wine-to-native Steam IPC socket bridge, which introduces a delay. Because the local cache does not update immediately, the game engine panics and aggressively re-triggers `StoreStats`, completely stalling the render thread. And each time you die, the re-triggers increase.
 
-Intercepts `StoreStats` (index 10 in the `ISteamUserStats` VTable):
+To test yourself, run the game with `MANGOHUD=1 WINEDEBUG=-all,warn+steam,err+steam,+steamclient PROTON_LOG=1 MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 %command%` and compare the log output in `$HOME/steam-335300.log` when the player die online and offline (or with the fix).
 
-1. Returns `true` instantly to unblock the render loop immediately.
-2. Offloads the actual `StoreStats` call to a detached background thread.
-3. Uses an atomic lock (`InterlockedCompareExchange`) with a 1.5-second cooldown to safely discard the engine's recursive panic calls during the IPC translation lag.
+### How the fix works
+
+Intercepts `StoreStats`, return `true` to unblock the game render loop, offload the original `StoreStats` to be a datached background thread and use an atomic lock to discard any recursive panic calls.
 
 ---
 
 ### Download
 
-The simplest way to install the fix is to download the pre-compiled `dinput8.dll` file directly from the Releases/Files tab.
+The simplest way to install the fix is to download the pre-compiled `dinput8.dll` file directly from the releases.
 
 ---
 
@@ -48,8 +47,14 @@ To compile the code yourself, you will need the MinGW-w64 cross-compiler install
 #### Build Command:
 
 ```bash
-x86_64-w64-mingw32-g++ -shared -static -O3 -s ds2_fix.cpp -o dinput8.dll
+ x86_64-w64-mingw32-g++ -shared -static -O2 ./src/ds2_fix.cpp -o ./output/dinput8.dll
 ```
+
+or just
+
+```bash
+make
+``` 
 
 ---
 
@@ -59,37 +64,75 @@ x86_64-w64-mingw32-g++ -shared -static -O3 -s ds2_fix.cpp -o dinput8.dll
 
 1. Copy the compiled `dinput8.dll` to the game's executable folder:
 `.../steamapps/common/Dark Souls II Scholar of the First Sin/Game/`
-2. Set your Steam launch options for the game. To completely stabilize frametimes to 60 FPS alongside the DLL fix, use the following:
+2. Set your Steam launch options for the game.
 
-**Standard Play:**
+*(Note: If you want the visual overlay, prepend `MANGOHUD=1` to any of the launch options below).*
+
+**Steam Deck:**
 
 ```bash
-MANGOHUD=1 MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" game-performance %command%
+MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" %command%
 
 ```
 
-*(Note: `MANGOHUD=1` is optional if you want the visual overlay, but combining `DXVK_FRAME_RATE` and `MANGOHUD_CONFIG` ensures perfectly consistent frame pacing).*
-
-**Seamless Co-op Mod:**
-If you are playing with the Seamless Co-op mod, use this command string instead to route the launcher correctly while maintaining the FPS limits and fixes:
+**Linux Desktop (e.g., CachyOS):**
+If your distribution provides the `game-performance` wrapper (like CachyOS), you can include it to further optimize your setup:
 
 ```bash
-MANGOHUD=1 MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" bash -c 'exec "${@/DarkSoulsII.exe/ds2sc_launcher.exe}"' -- game-performance %command%
+MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" game-performance %command%
+
+```
+
+**Seamless Co-op Mod:**
+If you are playing with the Seamless Co-op mod, use this command string instead to route the launcher correctly while maintaining the FPS limits and fixes.
+
+*Linux (with game-performance):*
+
+```bash
+MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" bash -c 'exec "${@/DarkSoulsII.exe/ds2sc_launcher.exe}"' -- game-performance %command%
+
 ```
 
 #### Windows (Untested)
 
-*Note: This cascading loop is primarily a Proton/Linux translation issue. This fix has not been actively tested on native Windows.*
+*Note: This bug is primarily a Proton/Linux translation issue. This fix has not been actively tested on native Windows, but if the game lags while playing  (and dying), give it a try.*
 
 1. Place `dinput8.dll` directly inside the `Game` folder next to `DarkSoulsII.exe`.
 
 ---
 
+### Comparisons
+
+The comparison is after dying in the game 10 times.
+
+#### CachyOS
+
+|           | After Fix                                                       | Before Fix                                                        |
+| --------- | --------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Frametime | ![Fixed CachyOS Frametime][/images/fixed_cachyos_frametime.png] | ![Unfixed CachyOS Frametime][/images/fixed_cachyos_frametime.png] |
+| Log       | ![Fixed CachyOS Log][/images/fixed_cachyos_log.png]             | ![Unfixed CachyOS Log][/images/fixed_cachyos_log.png]             |
+
+#### Steam Deck
+
+| After Fix                                                            | Before Fix                                                               |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| ![Fixed Steam Deck Frametime][/images/fixed_steamdeck_framerate.jpg] | ![Unfixed Steam Deck Frametime][/images/unfixed_steamdeck_framerate.jpg] |
+
 ### Alternative Option: Achievements Disabled
 
-If you experience unexpected behavior or memory issues with the standard background sync method, an alternative version of the code (`ds2_fix_achievements_disabled.cpp`) is available.
+If you experience unexpected behavior or memory issues with the `ds2_fix.cpp`, an alternative version of the code `ds2_fix_achievements_disabled.cpp` is available.
 
-This version simply forces `StoreStats` to return `false` instantly without spinning up background threads. This tricks the game into thinking you are offline, which guarantees a 100% stable framerate, but **it will permanently break Steam achievement unlocking** for that character session.
+This version simply forces `StoreStats` and `RequestCurrentStats` to return `false`. This tricks the game into thinking you are offline, which provides a more stable frametime. **Achievements will not unlock during gameplay** (Except `This is Dark Souls` for some reason).
+
+Commands:
+```bash
+x86_64-w64-mingw32-g++ -shared -static -O2 ./src/ds2_fix_achievements_disabled.cpp -o ./output/dinput8.dll
+```
+
+or
+```bash
+make no_achievements
+```
 
 ---
 
@@ -97,4 +140,4 @@ This version simply forces `StoreStats` to return `false` instantly without spin
 
 > **Use at your own risk.**
 >
-> This mod hooks the Steamworks API in volatile memory purely to offload a performance-blocking call. It does **not** modify save data, game files, or in-game player parameters. While this mechanism does not trigger VAC (which is not used by DS2) or standard FromSoftware save integrity softbans, modifying game memory online always carries an inherent, non-zero risk.
+> This mod hooks the Steamworks API purely to offload a performance-blocking call. It does **not** modify save data, game files, or player stats. While it doesn't trigger standard FromSoftware softbans, modifying game memory online always carries an inherent, non-zero risk.

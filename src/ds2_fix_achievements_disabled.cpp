@@ -1,7 +1,6 @@
 #include "windows.h"
 #include "string.h"
 
-// The hook functions. Returning false instantly aborts the Steam stats operations.
 bool Hooked_RequestCurrentStats(void* thisptr) {
     return false;
 }
@@ -11,39 +10,36 @@ bool Hooked_StoreStats(void* thisptr) {
 }
 
 DWORD WINAPI PatchThread(LPVOID lpParam) {
-    // Wait 5 seconds to ensure Dark Souls II has fully initialized steam_api64.dll
-    Sleep(5000); 
+    HMODULE hSteamApi = nullptr;
+    while (!hSteamApi) {
+        hSteamApi = GetModuleHandleA("steam_api64.dll");
+        Sleep(500);
+    }
 
-    HMODULE hSteam = GetModuleHandleA("steam_api64.dll");
-    if (!hSteam) return 0;
-
-    // Grab the global SteamUserStats interface directly from the loaded DLL
     typedef void* (*SteamUserStatsFn)();
-    SteamUserStatsFn pSteamUserStats = (SteamUserStatsFn)GetProcAddress(hSteam, "SteamUserStats");
+    SteamUserStatsFn pSteamUserStats = (SteamUserStatsFn)GetProcAddress(hSteamApi, "SteamUserStats");
     
     if (pSteamUserStats) {
-        void* pStatsIface = pSteamUserStats();
-        if (pStatsIface) {
-            uintptr_t** vtable = (uintptr_t**)pStatsIface;
-            DWORD oldProtect;
-            
-            // Unprotect the memory page containing the vtable (covering up to index 10)
-            VirtualProtect(vtable[0], 12 * sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
-            
-            // Index 0: RequestCurrentStats
-            vtable[0][0] = (uintptr_t)&Hooked_RequestCurrentStats;
-            
-            // Index 10: StoreStats
-            vtable[0][10] = (uintptr_t)&Hooked_StoreStats;
-            
-            // Restore memory protection
-            VirtualProtect(vtable[0], 12 * sizeof(uintptr_t), oldProtect, &oldProtect);
+        void* statsInterface = nullptr;
+        while (!statsInterface) {
+            statsInterface = pSteamUserStats();
+            Sleep(500);
         }
+
+        uintptr_t** vtable = (uintptr_t**)statsInterface;
+        DWORD oldProtect;
+
+        VirtualProtect(&vtable[0][0], sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
+        vtable[0][0] = (uintptr_t)&Hooked_RequestCurrentStats;
+        VirtualProtect(&vtable[0][0], sizeof(uintptr_t), oldProtect, &oldProtect);
+
+        VirtualProtect(&vtable[0][10], sizeof(uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
+        vtable[0][10] = (uintptr_t)&Hooked_StoreStats;
+        VirtualProtect(&vtable[0][10], sizeof(uintptr_t), oldProtect, &oldProtect);
     }
     return 0;
 }
 
-// Forward the standard DirectInput8Create export to the real Windows system DLL
 typedef HRESULT(WINAPI *DirectInput8Create_t)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN);
 DirectInput8Create_t Original_DirectInput8Create = nullptr;
 
