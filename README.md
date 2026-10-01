@@ -1,6 +1,6 @@
 # Dark Souls II: Scholar of the First Sin - Stuttering Fixes (Proton / Linux / Steam Deck)
 
-A lightweight `dinput8.dll` proxy that eliminates the frametime stutter upon death in *Dark Souls II: Scholar of the First Sin* on Linux, including Steam Deck.
+A fix that eliminates the frametime stutter upon death in *Dark Souls II: Scholar of the First Sin* on Linux, including Steam Deck.
 
 ---
 
