@@ -6,7 +6,7 @@ A fix that eliminates the frametime stutter upon death in *Dark Souls II: Schola
 
 ### TL;DR (Quick Install)
 
-1. Download `dinput8.dll` from the Releases tab.
+1. Download `dinput8.dll` from the Releases
 2. Copy it into your game directory: `.../Dark Souls II Scholar of the First Sin/Game/`
 3. Set Launch Options in Steam (Steam Deck default): `MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" %command%`
 
