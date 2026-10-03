@@ -18,9 +18,9 @@ _(For Linux Desktop or Seamless Co-op, see the full Installation section below).
 
 My assumption is that when a player dies, the game synchronously invokes `ISteamUserStats::StoreStats` on the main rendering thread.
 
-And on Linux / Proton this call must cross the Wine-to-native Steam IPC socket bridge, which introduces a delay. Because the local cache does not update immediately, the game engine panics and aggressively re-triggers `StoreStats`, completely stalling the render thread. And each time you die, the re-triggers increase.
+And on Linux / Proton this call must cross the Wine-to-native Steam IPC socket bridge, which introduces a delay (An user from Nexus reported this is also happening in Windows 10, so looks like there're more possible cause for the delay to happen). Because the local cache does not update immediately, the game engine panics and aggressively re-triggers `StoreStats`, completely stalling the render thread. And each time you die, the re-triggers increase.
 
-To test yourself, run the game with `MANGOHUD=1 WINEDEBUG=-all,warn+steam,err+steam,+steamclient PROTON_LOG=1 MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 %command%` and compare the log output in `$HOME/steam-335300.log` when the player die online and offline (or with the fix).
+To test yourself on Linux, run the game with `MANGOHUD=1 WINEDEBUG=-all,warn+steam,err+steam,+steamclient PROTON_LOG=1 MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 %command%` and compare the log output in `$HOME/steam-335300.log` when the player die online and offline (or with the fix).
 
 ### How the fix works
 
@@ -93,9 +93,9 @@ MANGOHUD_CONFIG=fps_limit=60 DXVK_FRAME_RATE=60 WINEDLLOVERRIDES="dinput8=n,b" b
 
 ```
 
-#### Windows (Untested)
+#### Windows
 
-*Note: This bug is primarily a Proton/Linux translation issue. This fix has not been actively tested on native Windows, but if the game lags while playing  (and dying), give it a try.*
+The Nexus user [sherryshibe](https://www.nexusmods.com/profile/sherryshibe) confirmed that it also works in Windows. Thank you very much!!
 
 1. Place `dinput8.dll` directly inside the `Game` folder next to `DarkSoulsII.exe`.
 
@@ -141,3 +141,7 @@ make no_achievements
 > **Use at your own risk.**
 >
 > This mod hooks the Steamworks API purely to offload a performance-blocking call. It does **not** modify save data, game files, or player stats. While it doesn't trigger standard FromSoftware softbans, modifying game memory online always carries an inherent, non-zero risk.
+
+### Special Thanks
+
+- [sherryshibe](https://www.nexusmods.com/profile/sherryshibe) for testing this in Windows 10
