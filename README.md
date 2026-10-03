@@ -1,4 +1,4 @@
-# Dark Souls II: Scholar of the First Sin - Stuttering Fixes (Proton / Linux / Steam Deck)
+# Dark Souls II: Scholar of the First Sin - Death Stuttering Fixes
 
 A fix that eliminates the frametime stutter upon death in *Dark Souls II: Scholar of the First Sin* on Linux, including Steam Deck.
 
