@@ -136,11 +136,44 @@ make no_achievements
 
 ---
 
+### Alternative Option: Fix the cause (45 bytes, no hooks)
+
+Looking at what the game does when it dies, we found what makes it slow down
+with every death on an account that has all of the game's achievements but the
+first: the game's own handler for Steam's "stats received" callback awards the
+first achievement again every time, without checking that it already has it,
+which makes Steam send the next "stats received", which is a loop that never
+ends, and every death starts one more copy of it. The fix is to add that check:
+45 bytes of the game's code, and nothing else.
+[docs/ACHIEVEMENT_LOOP.md](docs/ACHIEVEMENT_LOOP.md) has the details, the
+measurements, the code before and after, and how it was checked.
+
+It can be applied three ways, each on its own:
+
+* **DLL:** `make achievement_loop` builds a 3.5 KB `dinput8.dll` that makes the
+  change in memory when the game starts (`src/ds2_fix_achievement_loop.c`). Install
+  it like the other one. It hooks nothing and starts no threads.
+* **Linux, macOS or Windows, with Python 3:**
+  `python3 patch/patch_achievement_loop.py "…/Game/DarkSoulsII.exe"` changes
+  the executable itself (`--revert` undoes it, `--check` says which it has).
+* **Windows PowerShell:**
+  `.\patch\patch_achievement_loop.ps1 "…\Game\DarkSoulsII.exe"` (`-Revert`,
+  `-Check`).
+
+The scripts only change the file if it has exactly the bytes of the game
+version this is made for, keep a copy as `DarkSoulsII.exe.orig`, and Steam's
+"Verify integrity of game files" undoes them. This does nothing for an account
+that is missing any achievement other than the first (see the document).
+
+---
+
 ### Ban Disclaimer
 
 > **Use at your own risk.**
 >
 > This mod hooks the Steamworks API purely to offload a performance-blocking call. It does **not** modify save data, game files, or player stats. While it doesn't trigger standard FromSoftware softbans, modifying game memory online always carries an inherent, non-zero risk.
+>
+> That is about the hooking DLL above. The `patch/` scripts (and the DLL of the "Fix the cause" option, which changes the game's memory) change the game itself: use them offline.
 
 ### Special Thanks
 
